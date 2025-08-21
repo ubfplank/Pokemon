@@ -1,58 +1,46 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import "./App.css";
 
 function App() {
-  const [list, setList] = useState([]);
+  const [pokemons, setPokemons] = useState([]);
 
   useEffect(() => {
-    axios
-      .get('https://pokeapi.co/api/v2/pokemon?limit=20') // você pode aumentar o limit se quiser
-      .then((response) => setList(response.data.results));
+    async function fetchPokemons() {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=10");
+      const data = await res.json();
+
+      const detailed = await Promise.all(
+        data.results.map(async (p) => {
+          const resDetail = await fetch(p.url);
+          const detail = await resDetail.json();
+          return {
+            name: detail.name,
+            image: detail.sprites.front_default,
+            base_experience: detail.base_experience,
+          };
+        })
+      );
+
+      setPokemons(detailed);
+    }
+
+    fetchPokemons();
   }, []);
 
   return (
-    <>
-      <h3>Listagem de Pokémons</h3>
-      {list
-        .sort((a, b) => a.name.localeCompare(b.name)) // ordena por nome
-        .map((pokemon) => (
-          <div key={pokemon.name}>
-            <PokemonMoreDetails data={pokemon} />
+    <div className="App">
+      <h1>Pokémons</h1>
+      <div className="pokemon-grid">
+        {pokemons.map((p) => (
+          <div key={p.name} className="pokemon-card">
+            <img src={p.image} alt={p.name} />
+            <h3>{p.name}</h3>
+            <p>Exp: {p.base_experience}</p>
           </div>
         ))}
-    </>
-  );
-}
-
-const PokemonMoreDetails = ({ data }) => {
-  const [moreDetails, setMoreDetails] = useState(null);
-
-  useEffect(() => {
-    axios.get(data.url).then((response) => setMoreDetails(response.data));
-  }, [data.url]);
-
-  if (!moreDetails) {
-    return <p>Carregando...</p>;
-  }
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center', // corrigido
-        marginBottom: '8px',
-      }}
-    >
-      <img
-        src={moreDetails.sprites.front_default}
-        alt="pokemon"
-        style={{ width: 40, marginRight: 10 }}
-      />
-      <p>
-        {moreDetails.name} - {moreDetails.base_experience} EXP
-      </p>
+      </div>
     </div>
   );
-};
+}
 
 export default App;
